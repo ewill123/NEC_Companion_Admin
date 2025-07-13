@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { supabase } from "./supabaseClient";
+import Login from "./Login";
 
-// Background code snippets for subtle effect
 const codeSnippets = [
   "const fetchData = async () => {",
   "  const response = await fetch(url);",
@@ -20,14 +20,30 @@ function getRandomSnippet() {
   return codeSnippets[index];
 }
 
-export default function AdminDashboard() {
+export default function App() {
+  const [session, setSession] = useState(null);
   const [reportsMap, setReportsMap] = useState(new Map());
-  const [loading, setLoading] = useState(true);
+  const [loadingReports, setLoadingReports] = useState(true);
   const [selectedReport, setSelectedReport] = useState(null);
   const lastReportIds = useRef(new Set());
   const [newCount, setNewCount] = useState(0);
 
-  // Fetch reports and update map incrementally
+  useEffect(() => {
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => setSession(session));
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
   async function fetchReports() {
     const { data, error } = await supabase
       .from("issues")
@@ -39,7 +55,7 @@ export default function AdminDashboard() {
       return;
     }
 
-    setLoading(false);
+    setLoadingReports(false);
 
     setReportsMap((prevMap) => {
       const newMap = new Map(prevMap);
@@ -61,7 +77,6 @@ export default function AdminDashboard() {
     lastReportIds.current = new Set(data.map((r) => r.id));
   }
 
-  // Mark a report as read
   async function markAsRead(id) {
     await supabase.from("issues").update({ is_read: true }).eq("id", id);
     setReportsMap((prevMap) => {
@@ -74,21 +89,37 @@ export default function AdminDashboard() {
     });
   }
 
-  // Initial fetch and auto refresh every 15 seconds
   useEffect(() => {
-    fetchReports();
-    const interval = setInterval(fetchReports, 15000);
-    return () => clearInterval(interval);
-  }, []);
+    if (session) {
+      fetchReports();
+      const interval = setInterval(fetchReports, 15000);
+      return () => clearInterval(interval);
+    }
+  }, [session]);
 
-  // Convert map to sorted array
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setSelectedReport(null);
+  }
+
   const reportsArray = Array.from(reportsMap.values()).sort(
     (a, b) => new Date(b.created_at) - new Date(a.created_at)
   );
 
+  if (!session)
+    return (
+      <Login
+        onLogin={() =>
+          supabase.auth
+            .getSession()
+            .then(({ data }) => setSession(data.session))
+        }
+      />
+    );
+
   return (
     <>
-      {/* Background code effect */}
+      {/* Background code snippets faint overlay */}
       <div
         aria-hidden="true"
         style={{
@@ -102,10 +133,10 @@ export default function AdminDashboard() {
           backgroundColor: "#121212",
           color: "#c5c8c6",
           fontFamily: "'Fira Code', monospace",
-          fontSize: "14px",
+          fontSize: 14,
           lineHeight: 1.2,
           overflow: "hidden",
-          opacity: 0.1,
+          opacity: 0.07,
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-around",
@@ -125,16 +156,23 @@ export default function AdminDashboard() {
           ))}
       </div>
 
+      {/* Main content */}
       <div
         style={{
           position: "relative",
           zIndex: 10,
-          padding: 24,
+          padding: 32,
           fontFamily: "'Fira Code', monospace",
           color: "#d4d4d4",
           minHeight: "100vh",
-          backgroundColor: "rgba(30,30,47, 0.85)", // Semi-transparent to show background
-          backdropFilter: "blur(5px)",
+          backgroundColor: "rgba(30,30,47, 0.9)",
+          backdropFilter: "blur(6px)",
+          maxWidth: 1200,
+          margin: "0 auto",
+          borderRadius: 16,
+          boxShadow: "0 0 30px #ff4081",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <header
@@ -142,67 +180,94 @@ export default function AdminDashboard() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: 24,
+            marginBottom: 32,
+            flexWrap: "wrap",
+            gap: 16,
           }}
         >
-          <h1 style={{ color: "#ff79c6", margin: 0 }}>
+          <h1 style={{ color: "#ff79c6", margin: 0, fontSize: "1.8rem" }}>
             NEC Companion Admin Dashboard
           </h1>
-          {/* Notification badge */}
-          <div
-            style={{
-              position: "relative",
-              cursor: "default",
-            }}
-            title={`${newCount} new unread report${newCount !== 1 ? "s" : ""}`}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              height="32"
-              width="32"
-              fill="#ff79c6"
-              viewBox="0 0 24 24"
-              strokeWidth="2"
-              stroke="#ff79c6"
+
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div
+              style={{ position: "relative", cursor: "default" }}
+              title={`${newCount} new unread report${newCount !== 1 ? "s" : ""}`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-              />
-            </svg>
-            {newCount > 0 && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: "-6px",
-                  right: "-6px",
-                  background: "#ff79c6",
-                  color: "#121212",
-                  borderRadius: "50%",
-                  padding: "2px 7px",
-                  fontSize: 12,
-                  fontWeight: "bold",
-                  userSelect: "none",
-                }}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                height="32"
+                width="32"
+                fill="#ff79c6"
+                viewBox="0 0 24 24"
+                strokeWidth="2"
+                stroke="#ff79c6"
               >
-                {newCount}
-              </span>
-            )}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                />
+              </svg>
+              {newCount > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-6px",
+                    right: "-6px",
+                    background: "#ff79c6",
+                    color: "#121212",
+                    borderRadius: "50%",
+                    padding: "2px 7px",
+                    fontSize: 12,
+                    fontWeight: "bold",
+                    userSelect: "none",
+                  }}
+                >
+                  {newCount}
+                </span>
+              )}
+            </div>
+
+            <button
+              onClick={handleLogout}
+              style={{
+                backgroundColor: "#ff4081",
+                color: "#fff",
+                border: "none",
+                padding: "10px 20px",
+                borderRadius: 8,
+                fontWeight: "bold",
+                cursor: "pointer",
+                userSelect: "none",
+                transition: "background-color 0.3s",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = "#ff79c6")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "#ff4081")
+              }
+            >
+              Logout
+            </button>
           </div>
         </header>
 
-        {loading && <p>Loading reports...</p>}
+        {loadingReports && <p>Loading reports...</p>}
 
-        {!loading && reportsArray.length === 0 && <p>No reports found.</p>}
+        {!loadingReports && reportsArray.length === 0 && (
+          <p>No reports found.</p>
+        )}
 
-        {!loading && reportsArray.length > 0 && (
+        {!loadingReports && reportsArray.length > 0 && (
           <div className="table-wrapper" style={{ overflowX: "auto" }}>
             <table
               style={{
                 width: "100%",
                 borderCollapse: "collapse",
                 userSelect: "none",
+                fontSize: 14,
               }}
             >
               <thead>
@@ -238,8 +303,8 @@ export default function AdminDashboard() {
                         selectedReport?.id === report.id
                           ? "#3a3a6d"
                           : report.is_read
-                          ? "transparent"
-                          : "rgba(255, 121, 198, 0.15)",
+                            ? "transparent"
+                            : "rgba(255, 121, 198, 0.15)",
                       transition: "background-color 0.3s",
                     }}
                     title="Click to view details"
@@ -376,7 +441,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Add fadeInOut animation styles */}
+      {/* FadeInOut animation styles */}
       <style>
         {`
           @keyframes fadeInOut {
