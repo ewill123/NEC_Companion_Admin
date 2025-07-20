@@ -1,10 +1,10 @@
 // src/utils/classifyDepartment.jsx
-import nlp from "compromise";
 
 export function classifyDepartment(description) {
+  if (!description || typeof description !== "string") return null;
+
   const text = description.toLowerCase().replace(/[^\w\s]/g, "");
-  const doc = nlp(text);
-  const terms = doc.terms().out("array");
+  const words = text.split(/\s+/);
 
   const departmentScores = {
     Logistics: 0,
@@ -157,12 +157,10 @@ export function classifyDepartment(description) {
     ],
   };
 
-  for (const [department, keywords] of Object.entries(keywordMap)) {
-    for (const word of terms) {
-      for (const keyword of keywords) {
-        if (word.includes(keyword)) {
-          departmentScores[department]++;
-        }
+  for (const word of words) {
+    for (const [department, keywords] of Object.entries(keywordMap)) {
+      if (keywords.includes(word)) {
+        departmentScores[department]++;
       }
     }
   }
@@ -171,5 +169,7 @@ export function classifyDepartment(description) {
     b[1] > a[1] ? b : a
   );
 
-  return bestMatch[1] > 0 ? bestMatch[0] : null;
+  const result = bestMatch[1] > 0 ? bestMatch[0] : null;
+  console.log(`🔍 Auto-assigned "${description}" → ${result || "Unassigned"}`);
+  return result;
 }

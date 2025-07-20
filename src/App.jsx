@@ -7,24 +7,21 @@ import React, {
 } from "react";
 import { supabase } from "./supabaseClient";
 import Login from "./Login";
-
-import Header from "./components/Header";
 import ReportFilters from "./components/ReportFilters";
 import ReportTable from "./components/ReportTable";
 import ReportDetails from "./components/ReportDetails";
 import BackgroundAnimation from "./components/BackgroundAnimation";
 import ElectionDateManager from "./components/ElectionDateManager";
 import NewsManager from "./components/NewsManager";
-import AppConfigManager from "./components/AppConfigManager"; // ✅ NEW
-
+import AppConfigManager from "./components/AppConfigManager";
+import Header from "./components/Header";
 import { classifyDepartment } from "./utils/classifyDepartment";
-
 import { Toaster, toast } from "react-hot-toast";
 import { ThemeContext } from "./themeContext.jsx";
-
 import { motion, AnimatePresence } from "framer-motion";
 
-// 🚀 Your full component below is unchanged EXCEPT new tab for config
+// ✅ Real icons
+import { FaChartBar, FaCalendarAlt, FaNewspaper, FaCogs } from "react-icons/fa";
 
 export default function App() {
   const { theme } = useContext(ThemeContext);
@@ -69,9 +66,7 @@ export default function App() {
   }, []);
 
   const fetchReports = useCallback(async () => {
-    if (!loadingReports && reportsMap.size > 0) return;
     setLoadingReports(true);
-
     try {
       const { data, error } = await supabase
         .from("issues")
@@ -79,6 +74,9 @@ export default function App() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
+
+      const newMap = new Map();
+      let unreadCount = 0;
 
       for (const report of data) {
         if (!report.assigned_department) {
@@ -90,23 +88,18 @@ export default function App() {
               .eq("id", report.id);
 
             if (!updateError) {
+              console.log(
+                `🧠 Auto-assigned report ${report.id} to ${department}`
+              );
               report.assigned_department = department;
               report.status = "Assigned";
             }
           }
         }
-      }
 
-      const newMap = new Map();
-      let unreadCount = 0;
-      data.forEach((report) => {
-        if (selectedReport?.id === report.id) {
-          newMap.set(report.id, selectedReport);
-        } else {
-          newMap.set(report.id, report);
-        }
         if (!report.is_read) unreadCount++;
-      });
+        newMap.set(report.id, report);
+      }
 
       setReportsMap(newMap);
       setNewCount(unreadCount);
@@ -116,7 +109,7 @@ export default function App() {
     } finally {
       setLoadingReports(false);
     }
-  }, [loadingReports, reportsMap, selectedReport]);
+  }, []);
 
   async function markAsRead(id) {
     try {
@@ -278,16 +271,17 @@ export default function App() {
           <Header newCount={newCount} onLogout={handleLogout} />
           <nav style={{ display: "flex", gap: "1rem" }}>
             <button onClick={() => setActiveTab("dashboard")}>
-              📊 Dashboard
+              <FaChartBar style={{ marginRight: 6 }} /> Dashboard
             </button>
             <button onClick={() => setActiveTab("election")}>
-              🗳️ Election Date
+              <FaCalendarAlt style={{ marginRight: 6 }} /> Election Date
             </button>
-            <button onClick={() => setActiveTab("news")}>📰 News</button>
+            <button onClick={() => setActiveTab("news")}>
+              <FaNewspaper style={{ marginRight: 6 }} /> News
+            </button>
             <button onClick={() => setActiveTab("config")}>
-              ⚙️ App Config
-            </button>{" "}
-            {/* ✅ NEW */}
+              <FaCogs style={{ marginRight: 6 }} /> App Config
+            </button>
           </nav>
         </div>
 
@@ -310,7 +304,6 @@ export default function App() {
                 gap: 16,
               }}
             >
-              {/* Same dashboard logic */}
               <ReportFilters
                 departments={departments}
                 filterDepartment={filterDepartment}
@@ -383,8 +376,7 @@ export default function App() {
           )}
           {activeTab === "election" && <ElectionDateManager />}
           {activeTab === "news" && <NewsManager />}
-          {activeTab === "config" && <AppConfigManager />}{" "}
-          {/* ✅ Render new tab */}
+          {activeTab === "config" && <AppConfigManager />}
         </div>
       </div>
     </>
