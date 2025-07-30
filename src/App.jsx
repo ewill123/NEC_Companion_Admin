@@ -19,13 +19,17 @@ import { classifyDepartment } from "./utils/classifyDepartment";
 import { Toaster, toast } from "react-hot-toast";
 import { ThemeContext } from "./themeContext.jsx";
 import { motion, AnimatePresence } from "framer-motion";
+import VideoList from "./components/VideoList";
+import VideoUploader from "./components/VideoUploader";
+import { ref, deleteObject } from "firebase/storage";
+import { storage } from "./firebaseConfig";
 
-// ✅ Real icons
 import { FaChartBar, FaCalendarAlt, FaNewspaper, FaCogs } from "react-icons/fa";
 
 export default function App() {
   const { theme } = useContext(ThemeContext);
 
+  // Reports state
   const [session, setSession] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [reportsMap, setReportsMap] = useState(new Map());
@@ -38,6 +42,10 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const lastReportIds = useRef(new Set());
 
+  // Videos state
+  const [videos, setVideos] = useState([]);
+  const [videosLoading, setVideosLoading] = useState(false);
+
   const departments = [
     "Logistics",
     "Maintenance",
@@ -46,6 +54,7 @@ export default function App() {
     "Human Resources",
   ];
 
+  // Auth session setup
   useEffect(() => {
     let isMounted = true;
 
@@ -65,6 +74,7 @@ export default function App() {
     };
   }, []);
 
+  // Fetch reports
   const fetchReports = useCallback(async () => {
     setLoadingReports(true);
     try {
@@ -111,6 +121,43 @@ export default function App() {
     }
   }, []);
 
+  // Fetch videos
+  const fetchVideos = useCallback(async () => {
+    setVideosLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("education_videos")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setVideos(data || []);
+    } catch (error) {
+      toast.error("Error fetching videos: " + error.message);
+    } finally {
+      setVideosLoading(false);
+    }
+  }, []);
+
+  // Poll only reports — not videos
+  useEffect(() => {
+    if (!session) return;
+
+    fetchReports();
+
+    // Only fetch videos ONCE when the tab changes to "videos"
+    if (activeTab === "videos") {
+      fetchVideos();
+    }
+
+    const interval = setInterval(() => {
+      fetchReports(); // Only reports are polled
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [session, activeTab, fetchReports, fetchVideos]);
+
+  // Mark report as read
   async function markAsRead(id) {
     try {
       const { error } = await supabase
@@ -132,6 +179,7 @@ export default function App() {
     }
   }
 
+  // Assign report to department
   async function assignReportToDepartment(reportId, department) {
     if (!department) {
       toast.error("Please select a department");
@@ -170,6 +218,7 @@ export default function App() {
     }
   }
 
+  // Delete report
   async function deleteReport(report) {
     if (!window.confirm(`Delete report ID ${report.id}?`)) return;
 
@@ -193,24 +242,47 @@ export default function App() {
     }
   }
 
-  useEffect(() => {
-    if (!session) return;
-    fetchReports();
-    const interval = setInterval(fetchReports, 15000);
-    return () => clearInterval(interval);
-  }, [session, fetchReports]);
+  // Delete video handler lifted here
+  async function deleteVideo(video) {
+    if (!window.confirm(`Delete video "${video.title}"?`)) return;
 
+    try {
+      if (!video.firebase_path) {
+        toast.error("Missing firebase_path. Cannot delete from Firebase.");
+        return;
+      }
+      // Delete from Firebase Storage
+      const storageRef = ref(storage, video.firebase_path);
+      await deleteObject(storageRef);
+
+      // Delete from Supabase
+      const { error } = await supabase
+        .from("education_videos")
+        .delete()
+        .eq("id", video.id);
+      if (error) throw error;
+
+      setVideos((prev) => prev.filter((v) => v.id !== video.id));
+      toast.success("Video deleted");
+    } catch (err) {
+      toast.error("Failed to delete: " + err.message);
+    }
+  }
+
+  // Clear filters
+  function onClearFilters() {
+    setFilterDepartment("");
+    setSearchTerm("");
+  }
+
+  // Logout
   async function handleLogout() {
     await supabase.auth.signOut();
     setSelectedReport(null);
     setSession(null);
   }
 
-  function onClearFilters() {
-    setFilterDepartment("");
-    setSearchTerm("");
-  }
-
+  // Filter and sort reports for display
   let reportsArray = Array.from(reportsMap.values());
 
   if (filterDepartment) {
@@ -232,6 +304,7 @@ export default function App() {
 
   reportsArray.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
+  // If no session, show login
   if (!session) {
     return (
       <Login
@@ -244,6 +317,7 @@ export default function App() {
     );
   }
 
+  // Main app UI
   return (
     <>
       <BackgroundAnimation />
@@ -282,6 +356,7 @@ export default function App() {
             <button onClick={() => setActiveTab("config")}>
               <FaCogs style={{ marginRight: 6 }} /> App Config
             </button>
+            <button onClick={() => setActiveTab("videos")}>🎥 Videos</button>
           </nav>
         </div>
 
@@ -374,9 +449,32 @@ export default function App() {
               </div>
             </div>
           )}
+
           {activeTab === "election" && <ElectionDateManager />}
           {activeTab === "news" && <NewsManager />}
           {activeTab === "config" && <AppConfigManager />}
+          {activeTab === "videos" && (
+            <div
+              style={{
+                width: "100%",
+                maxWidth: 1000,
+                display: "flex",
+                flexDirection: "column",
+                gap: 32,
+              }}
+            >
+              <VideoUploader
+                onUploadComplete={() => {
+                  fetchVideos();
+                }}
+              />
+              <VideoList
+                videos={videos}
+                loading={videosLoading}
+                onDeleteVideo={deleteVideo}
+              />
+            </div>
+          )}
         </div>
       </div>
     </>
