@@ -1,5 +1,4 @@
 import React, { useState, useContext } from "react";
-
 import { storage } from "../firebaseConfig";
 import { supabase } from "../supabaseClient";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
@@ -12,6 +11,12 @@ export default function VideoUploader({ onUploadComplete }) {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
   const [progress, setProgress] = useState(0);
+
+  const isDark = theme === "dark";
+  const bgColor = isDark ? "#1f2937" : "#ffffff";
+  const borderColor = isDark ? "#374151" : "#d1d5db";
+  const inputBg = isDark ? "#111827" : "#f9fafb";
+  const textColor = isDark ? "#f4f4f4" : "#1f2937";
 
   async function uploadVideo() {
     if (!file) {
@@ -30,7 +35,6 @@ export default function VideoUploader({ onUploadComplete }) {
     try {
       const uniqueFilename = `${Date.now()}_${file.name}`;
       const storageRef = ref(storage, `education_videos/${uniqueFilename}`);
-
       const uploadTask = uploadBytesResumable(storageRef, file);
 
       await new Promise((resolve, reject) => {
@@ -92,48 +96,90 @@ export default function VideoUploader({ onUploadComplete }) {
   return (
     <div
       style={{
-        padding: 16,
-        borderRadius: 8,
-        backgroundColor: theme === "dark" ? "#222" : "#fafafa",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        maxWidth: 600,
+        padding: 24,
+        borderRadius: 14,
+        backgroundColor: bgColor,
+        color: textColor,
+        border: `1px solid ${borderColor}`,
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
         transition: "all 0.3s ease",
+        width: "100%",
+        maxWidth: 600,
+        margin: "0 auto",
       }}
     >
-      <h2 style={{ marginBottom: 12 }}>📤 Upload New Educational Video</h2>
+      <h3 style={{ marginBottom: 16, fontSize: 22, fontWeight: 600 }}>
+        📤 Upload New Educational Video
+      </h3>
+
       <input
         type="text"
         placeholder="Video Title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
+        disabled={uploading}
         style={{
           width: "100%",
-          padding: 8,
-          marginBottom: 12,
-          borderRadius: 4,
-          border: `1px solid ${theme === "dark" ? "#555" : "#ccc"}`,
-          backgroundColor: theme === "dark" ? "#333" : "#fff",
-          color: theme === "dark" ? "#eee" : "#222",
+          padding: 12,
+          marginBottom: 14,
+          borderRadius: 10,
+          border: `1px solid ${borderColor}`,
+          backgroundColor: inputBg,
+          color: textColor,
+          fontSize: 15,
         }}
-        disabled={uploading}
       />
-      <input
-        type="file"
-        accept="video/*"
-        onChange={(e) => setFile(e.target.files[0])}
-        disabled={uploading}
-        style={{ marginBottom: 12 }}
-      />
+
+      <div style={{ marginBottom: 16 }}>
+        <label
+          htmlFor="file-upload"
+          style={{
+            display: "inline-block",
+            padding: "10px 18px",
+            borderRadius: 8,
+            backgroundColor: "#10b981", // Emerald green
+            color: "#fff",
+            fontWeight: "bold",
+            fontSize: 14,
+            cursor: uploading ? "not-allowed" : "pointer",
+            transition: "background 0.3s",
+            marginRight: 12,
+          }}
+        >
+          {file ? "Change File" : "Choose Video"}
+        </label>
+
+        <input
+          id="file-upload"
+          type="file"
+          accept="video/*"
+          onChange={(e) => setFile(e.target.files[0])}
+          disabled={uploading}
+          style={{ display: "none" }}
+        />
+
+        {file && (
+          <span
+            style={{
+              fontSize: 14,
+              color: isDark ? "#d1d5db" : "#374151",
+              wordBreak: "break-word",
+            }}
+          >
+            {file.name}
+          </span>
+        )}
+      </div>
 
       {uploading && (
         <div
           style={{
-            height: 8,
+            height: 10,
             width: "100%",
-            borderRadius: 4,
+            borderRadius: 6,
             overflow: "hidden",
-            backgroundColor: theme === "dark" ? "#444" : "#ddd",
-            marginBottom: 12,
+            backgroundColor: isDark ? "#374151" : "#e5e7eb",
+            marginBottom: 16,
           }}
         >
           <div
@@ -151,13 +197,15 @@ export default function VideoUploader({ onUploadComplete }) {
         onClick={uploadVideo}
         disabled={uploading}
         style={{
-          padding: "10px 20px",
-          borderRadius: 4,
+          padding: "12px 24px",
+          borderRadius: 10,
           border: "none",
-          backgroundColor: uploading ? "#888" : "#007bff",
-          color: "#fff",
-          cursor: uploading ? "not-allowed" : "pointer",
+          backgroundColor: uploading ? "#6b7280" : "#2563eb",
+          color: "white",
           fontWeight: "bold",
+          fontSize: 16,
+          cursor: uploading ? "not-allowed" : "pointer",
+          transition: "background-color 0.3s ease",
         }}
       >
         {uploading ? `Uploading... (${progress}%)` : "Upload Video"}

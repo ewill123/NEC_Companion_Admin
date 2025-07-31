@@ -14,7 +14,6 @@ import BackgroundAnimation from "./components/BackgroundAnimation";
 import ElectionDateManager from "./components/ElectionDateManager";
 import NewsManager from "./components/NewsManager";
 import AppConfigManager from "./components/AppConfigManager";
-import Header from "./components/Header";
 import { classifyDepartment } from "./utils/classifyDepartment";
 import { Toaster, toast } from "react-hot-toast";
 import { ThemeContext } from "./themeContext.jsx";
@@ -23,13 +22,22 @@ import VideoList from "./components/VideoList";
 import VideoUploader from "./components/VideoUploader";
 import { ref, deleteObject } from "firebase/storage";
 import { storage } from "./firebaseConfig";
-
-import { FaChartBar, FaCalendarAlt, FaNewspaper, FaCogs } from "react-icons/fa";
+import { FaSun, FaMoon } from "react-icons/fa";
+// Real professional icons from react-icons/fa
+import {
+  FaChartBar,
+  FaCalendarAlt,
+  FaNewspaper,
+  FaCogs,
+  FaVideo,
+  FaBars,
+  FaSignOutAlt,
+} from "react-icons/fa";
 
 export default function App() {
   const { theme } = useContext(ThemeContext);
 
-  // Reports state
+  // --- States ---
   const [session, setSession] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [reportsMap, setReportsMap] = useState(new Map());
@@ -40,11 +48,11 @@ export default function App() {
   const [assigning, setAssigning] = useState(false);
   const [filterDepartment, setFilterDepartment] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const lastReportIds = useRef(new Set());
-
-  // Videos state
   const [videos, setVideos] = useState([]);
   const [videosLoading, setVideosLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+const { theme, toggleTheme } = useContext(ThemeContext);
+  const lastReportIds = useRef(new Set());
 
   const departments = [
     "Logistics",
@@ -54,7 +62,7 @@ export default function App() {
     "Human Resources",
   ];
 
-  // Auth session setup
+  // --- Authentication setup ---
   useEffect(() => {
     let isMounted = true;
 
@@ -74,7 +82,7 @@ export default function App() {
     };
   }, []);
 
-  // Fetch reports
+  // --- Fetch reports ---
   const fetchReports = useCallback(async () => {
     setLoadingReports(true);
     try {
@@ -121,7 +129,7 @@ export default function App() {
     }
   }, []);
 
-  // Fetch videos
+  // --- Fetch videos ---
   const fetchVideos = useCallback(async () => {
     setVideosLoading(true);
     try {
@@ -139,25 +147,24 @@ export default function App() {
     }
   }, []);
 
-  // Poll only reports — not videos
+  // --- Poll reports every 15s, videos only once when tab changes ---
   useEffect(() => {
     if (!session) return;
 
     fetchReports();
 
-    // Only fetch videos ONCE when the tab changes to "videos"
     if (activeTab === "videos") {
       fetchVideos();
     }
 
     const interval = setInterval(() => {
-      fetchReports(); // Only reports are polled
+      fetchReports();
     }, 15000);
 
     return () => clearInterval(interval);
   }, [session, activeTab, fetchReports, fetchVideos]);
 
-  // Mark report as read
+  // --- Mark report as read ---
   async function markAsRead(id) {
     try {
       const { error } = await supabase
@@ -179,7 +186,7 @@ export default function App() {
     }
   }
 
-  // Assign report to department
+  // --- Assign report ---
   async function assignReportToDepartment(reportId, department) {
     if (!department) {
       toast.error("Please select a department");
@@ -218,7 +225,7 @@ export default function App() {
     }
   }
 
-  // Delete report
+  // --- Delete report ---
   async function deleteReport(report) {
     if (!window.confirm(`Delete report ID ${report.id}?`)) return;
 
@@ -242,7 +249,7 @@ export default function App() {
     }
   }
 
-  // Delete video handler lifted here
+  // --- Delete video ---
   async function deleteVideo(video) {
     if (!window.confirm(`Delete video "${video.title}"?`)) return;
 
@@ -251,11 +258,9 @@ export default function App() {
         toast.error("Missing firebase_path. Cannot delete from Firebase.");
         return;
       }
-      // Delete from Firebase Storage
       const storageRef = ref(storage, video.firebase_path);
       await deleteObject(storageRef);
 
-      // Delete from Supabase
       const { error } = await supabase
         .from("education_videos")
         .delete()
@@ -269,20 +274,20 @@ export default function App() {
     }
   }
 
-  // Clear filters
+  // --- Clear filters ---
   function onClearFilters() {
     setFilterDepartment("");
     setSearchTerm("");
   }
 
-  // Logout
+  // --- Logout ---
   async function handleLogout() {
     await supabase.auth.signOut();
     setSelectedReport(null);
     setSession(null);
   }
 
-  // Filter and sort reports for display
+  // --- Filter and sort reports ---
   let reportsArray = Array.from(reportsMap.values());
 
   if (filterDepartment) {
@@ -304,178 +309,459 @@ export default function App() {
 
   reportsArray.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  // If no session, show login
+  // --- If no session, show login ---
   if (!session) {
     return (
       <Login
         onLogin={() =>
-          supabase.auth
-            .getSession()
-            .then(({ data }) => setSession(data.session))
+          supabase.auth.getSession().then(({ data }) => setSession(data.session))
         }
       />
     );
   }
 
-  // Main app UI
+  // --- Main UI ---
+
   return (
     <>
       <BackgroundAnimation />
       <Toaster position="top-right" />
       <div
+        className="app-container"
         style={{
+          display: "flex",
           height: "100vh",
           width: "100vw",
-          display: "flex",
-          flexDirection: "column",
           backgroundColor: theme === "dark" ? "#121212" : "#f9fbfd",
+          color: theme === "dark" ? "#eee" : "#222",
+          overflow: "hidden",
         }}
       >
-        <div
+        {/* Sidebar */}
+        <aside
+          className="sidebar"
           style={{
+            width: sidebarOpen ? 280 : 72,
+            backgroundColor: theme === "dark" ? "#1a1a1a" : "#fff",
+            borderRight: theme === "dark" ? "1px solid #333" : "1px solid #eee",
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "1rem 2rem",
-            backgroundColor: theme === "dark" ? "#1a1a1a" : "#ffffff",
-            borderBottom:
-              theme === "dark" ? "1px solid #333" : "1px solid #eee",
+            flexDirection: "column",
+            transition: "width 0.3s ease",
+            boxShadow:
+              theme === "dark"
+                ? "2px 0 8px rgba(0,0,0,0.8)"
+                : "2px 0 8px rgba(0,0,0,0.1)",
+            zIndex: 1000,
           }}
         >
-          <Header newCount={newCount} onLogout={handleLogout} />
-          <nav style={{ display: "flex", gap: "1rem" }}>
-            <button onClick={() => setActiveTab("dashboard")}>
-              <FaChartBar style={{ marginRight: 6 }} /> Dashboard
+          {/* Header + toggle */}
+          <div
+            style={{
+              padding: "1rem 1.5rem",
+              borderBottom: theme === "dark" ? "1px solid #333" : "1px solid #eee",
+              display: "flex",
+              justifyContent: sidebarOpen ? "space-between" : "center",
+              alignItems: "center",
+            }}
+          >
+            {sidebarOpen && (
+              <h2
+                style={{
+                  margin: 0,
+                  fontWeight: "bold",
+                  fontSize: 22,
+                  userSelect: "none",
+                  color: theme === "dark" ? "#fff" : "#222",
+                }}
+              >
+                NEC Admin
+              </h2>
+            )}
+            <button
+              onClick={() => setSidebarOpen((v) => !v)}
+              aria-label="Toggle sidebar"
+              style={{
+                background: "none",
+                border: "none",
+                color: theme === "dark" ? "#eee" : "#222",
+                cursor: "pointer",
+                fontSize: 22,
+                padding: 4,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <FaBars />
             </button>
-            <button onClick={() => setActiveTab("election")}>
-              <FaCalendarAlt style={{ marginRight: 6 }} /> Election Date
-            </button>
-            <button onClick={() => setActiveTab("news")}>
-              <FaNewspaper style={{ marginRight: 6 }} /> News
-            </button>
-            <button onClick={() => setActiveTab("config")}>
-              <FaCogs style={{ marginRight: 6 }} /> App Config
-            </button>
-            <button onClick={() => setActiveTab("videos")}>🎥 Videos</button>
-          </nav>
-        </div>
+          </div>
 
-        <div
+          {/* Navigation */}
+          <nav
+            style={{
+              flexGrow: 1,
+              display: "flex",
+              flexDirection: "column",
+              padding: "1rem 0",
+              gap: 4,
+            }}
+          >
+            <button
+  onClick={toggleTheme}
+  aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+  style={{
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: 20,
+    display: "flex",
+    alignItems: "center",
+    color: theme === "dark" ? "#f9fbfd" : "#121212",
+    transition: "color 0.3s ease",
+  }}
+>
+  {theme === "light" ? <FaMoon /> : <FaSun />}
+</button>
+            {[
+              { key: "dashboard", label: "Dashboard", icon: <FaChartBar /> },
+              { key: "election", label: "Election Date", icon: <FaCalendarAlt /> },
+              { key: "news", label: "News", icon: <FaNewspaper /> },
+              { key: "config", label: "App Config", icon: <FaCogs /> },
+              { key: "videos", label: "Videos", icon: <FaVideo /> },
+            ].map(({ key, label, icon }) => {
+              const active = activeTab === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setActiveTab(key)}
+                  className="nav-btn"
+                  aria-current={active ? "page" : undefined}
+                  style={{
+                    all: "unset",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                    padding: "0.75rem 1.5rem",
+                    fontWeight: active ? "700" : "500",
+                    fontSize: 16,
+                    color: active
+                      ? theme === "dark"
+                        ? "#4caf50"
+                        : "#388e3c"
+                      : theme === "dark"
+                      ? "#ccc"
+                      : "#555",
+                    backgroundColor: active
+                      ? theme === "dark"
+                        ? "rgba(76, 175, 80, 0.15)"
+                        : "rgba(56, 142, 60, 0.15)"
+                      : "transparent",
+                    borderLeft: active
+                      ? `4px solid ${
+                          theme === "dark" ? "#4caf50" : "#388e3c"
+                        }`
+                      : "4px solid transparent",
+                    transition: "background-color 0.25s ease, color 0.25s ease",
+                    whiteSpace: "nowrap",
+                    userSelect: "none",
+                    borderRadius: "0 8px 8px 0",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    direction: sidebarOpen ? "ltr" : "rtl",
+                    justifyContent: sidebarOpen ? "flex-start" : "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 22,
+                      lineHeight: 1,
+                      flexShrink: 0,
+                      userSelect: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 28,
+                      color: active
+                        ? theme === "dark"
+                          ? "#4caf50"
+                          : "#388e3c"
+                        : theme === "dark"
+                        ? "#aaa"
+                        : "#777",
+                    }}
+                  >
+                    {icon}
+                  </span>
+                  {sidebarOpen && <span>{label}</span>}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Logout */}
+          <div
+            style={{
+              padding: "1rem 1.5rem",
+              borderTop: theme === "dark" ? "1px solid #333" : "1px solid #eee",
+            }}
+          >
+            <button
+              onClick={handleLogout}
+              style={{
+                all: "unset",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "0.75rem 1rem",
+                fontWeight: "700",
+                fontSize: 16,
+                color: "#fff",
+                backgroundColor: "#d32f2f",
+                borderRadius: 8,
+                justifyContent: sidebarOpen ? "flex-start" : "center",
+                userSelect: "none",
+                transition: "background-color 0.25s ease",
+                boxShadow:
+                  "0 2px 4px rgba(211, 47, 47, 0.6), 0 0 6px rgba(211, 47, 47, 0.4)",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = "#b71c1c")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "#d32f2f")
+              }
+              aria-label="Logout"
+            >
+              <FaSignOutAlt
+                style={{ fontSize: 20, userSelect: "none", pointerEvents: "none" }}
+              />
+              {sidebarOpen && "Logout"}
+            </button>
+          </div>
+        </aside>
+
+        {/* Main Content Area */}
+        <main
           style={{
-            flex: 1,
-            overflow: "auto",
+            flexGrow: 1,
+            overflowY: "auto",
             padding: 24,
             display: "flex",
             justifyContent: "center",
+            backgroundColor: theme === "dark" ? "#121212" : "#f9fbfd",
           }}
         >
-          {activeTab === "dashboard" && (
-            <div
-              style={{
-                width: "100%",
-                maxWidth: 1200,
-                display: "flex",
-                flexDirection: "column",
-                gap: 16,
-              }}
-            >
-              <ReportFilters
-                departments={departments}
-                filterDepartment={filterDepartment}
-                setFilterDepartment={setFilterDepartment}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                onClearFilters={onClearFilters}
-              />
-              <div style={{ display: "flex", gap: 24 }}>
-                <ReportTable
-                  reports={reportsArray}
-                  selectedReport={selectedReport}
-                  setSelectedReport={(report) => {
-                    setSelectedReport(report);
-                    if (report && !report.is_read) markAsRead(report.id);
-                  }}
-                  markAsRead={markAsRead}
-                  deleteReport={deleteReport}
-                  loading={loadingReports}
-                />
-                <AnimatePresence mode="wait">
-                  {selectedReport ? (
-                    <motion.div
-                      key={selectedReport.id}
-                      initial={{ opacity: 0, x: 50 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 50 }}
-                      transition={{ duration: 0.3 }}
-                      style={{
-                        flexBasis: "40%",
-                        border: "1px solid #ddd",
-                        borderRadius: 8,
-                        padding: 16,
-                        backgroundColor:
-                          theme === "dark" ? "#282828" : "#ffffff",
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 1200,
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+            }}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {activeTab === "dashboard" && (
+                <motion.div
+                  key="dashboard"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  style={{ flexGrow: 1 }}
+                >
+                  <ReportFilters
+                    departments={departments}
+                    filterDepartment={filterDepartment}
+                    setFilterDepartment={setFilterDepartment}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    onClearFilters={onClearFilters}
+                  />
+                  <div style={{ display: "flex", gap: 24 }}>
+                    <ReportTable
+                      reports={reportsArray}
+                      selectedReport={selectedReport}
+                      setSelectedReport={(report) => {
+                        setSelectedReport(report);
+                        if (report && !report.is_read) markAsRead(report.id);
                       }}
-                    >
-                      <ReportDetails
-                        report={selectedReport}
-                        departments={departments}
-                        selectedDepartment={selectedDepartment}
-                        setSelectedDepartment={setSelectedDepartment}
-                        assignToDepartment={() =>
-                          assignReportToDepartment(
-                            selectedReport.id,
-                            selectedDepartment
-                          )
-                        }
-                        assigning={assigning}
-                      />
-                    </motion.div>
-                  ) : (
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      style={{
-                        marginTop: 50,
-                        fontSize: 16,
-                        color: theme === "dark" ? "#888" : "#777",
-                        textAlign: "center",
-                        flexGrow: 1,
-                      }}
-                    >
-                      Select a report to view details
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-          )}
+                      markAsRead={markAsRead}
+                      deleteReport={deleteReport}
+                      loading={loadingReports}
+                    />
+                    <AnimatePresence mode="wait">
+                      {selectedReport ? (
+                        <motion.div
+                          key={selectedReport.id}
+                          initial={{ opacity: 0, x: 50 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 50 }}
+                          transition={{ duration: 0.3 }}
+                          style={{
+                            flexBasis: "40%",
+                            border: "1px solid #ddd",
+                            borderRadius: 8,
+                            padding: 16,
+                            backgroundColor:
+                              theme === "dark" ? "#282828" : "#ffffff",
+                            overflowY: "auto",
+                            maxHeight: "75vh",
+                          }}
+                        >
+                          <ReportDetails
+                            report={selectedReport}
+                            departments={departments}
+                            selectedDepartment={selectedDepartment}
+                            setSelectedDepartment={setSelectedDepartment}
+                            assignToDepartment={() =>
+                              assignReportToDepartment(
+                                selectedReport.id,
+                                selectedDepartment
+                              )
+                            }
+                            assigning={assigning}
+                          />
+                        </motion.div>
+                      ) : (
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          style={{
+                            marginTop: 50,
+                            fontSize: 16,
+                            color: theme === "dark" ? "#888" : "#777",
+                            textAlign: "center",
+                            flexGrow: 1,
+                          }}
+                        >
+                          Select a report to view details
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              )}
 
-          {activeTab === "election" && <ElectionDateManager />}
-          {activeTab === "news" && <NewsManager />}
-          {activeTab === "config" && <AppConfigManager />}
-          {activeTab === "videos" && (
-            <div
-              style={{
-                width: "100%",
-                maxWidth: 1000,
-                display: "flex",
-                flexDirection: "column",
-                gap: 32,
-              }}
-            >
-              <VideoUploader
-                onUploadComplete={() => {
-                  fetchVideos();
-                }}
-              />
-              <VideoList
-                videos={videos}
-                loading={videosLoading}
-                onDeleteVideo={deleteVideo}
-              />
-            </div>
-          )}
-        </div>
+              {activeTab === "election" && (
+                <motion.div
+                  key="election"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  style={{ flexGrow: 1 }}
+                >
+                  <ElectionDateManager />
+                </motion.div>
+              )}
+
+              {activeTab === "news" && (
+                <motion.div
+                  key="news"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  style={{ flexGrow: 1 }}
+                >
+                  <NewsManager />
+                </motion.div>
+              )}
+
+              {activeTab === "config" && (
+                <motion.div
+                  key="config"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  style={{ flexGrow: 1 }}
+                >
+                  <AppConfigManager />
+                </motion.div>
+              )}
+
+              {activeTab === "videos" && (
+                <motion.div
+                  key="videos"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  style={{
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 32,
+                  }}
+                >
+                  <VideoUploader
+                    onUploadComplete={() => {
+                      fetchVideos();
+                    }}
+                  />
+                  <VideoList
+                    videos={videos}
+                    loading={videosLoading}
+                    onDeleteVideo={deleteVideo}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </main>
+
+        <style>{`
+        html[data-theme="light"] {
+  --bg-color: #f9fbfd;
+  --text-color: #121212;
+  --header-bg: #ffffff;
+  --header-border: #eee;
+  --card-bg: #ffffff;
+}
+
+html[data-theme="dark"] {
+  --bg-color: #121212;
+  --text-color: #f9fbfd;
+  --header-bg: #1a1a1a;
+  --header-border: #333;
+  --card-bg: #282828;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+          .nav-btn:hover {
+            background-color: ${theme === "dark" ? "#2a2a2a" : "#f0f0f0"};
+          }
+          .nav-btn:focus-visible {
+            outline: 2px solid ${theme === "dark" ? "#4caf50" : "#388e3c"};
+            outline-offset: 2px;
+          }
+
+          /* Responsive */
+          @media (max-width: 900px) {
+            .sidebar {
+              position: fixed !important;
+              height: 100% !important;
+              z-index: 10000 !important;
+              transform: translateX(-100%);
+              transition: transform 0.3s ease;
+            }
+            .sidebar.open {
+              transform: translateX(0);
+            }
+            main {
+              padding: 16px !important;
+            }
+          }
+        `}</style>
       </div>
     </>
   );

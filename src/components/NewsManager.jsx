@@ -22,6 +22,13 @@ export default function NewsManager() {
   const [deletingId, setDeletingId] = useState(null);
   const [filter, setFilter] = useState("all");
 
+  const isDark = theme === "dark";
+  const textColor = isDark ? "#f4f4f4" : "#1f2937";
+  const bgColor = isDark ? "#111827" : "#ffffff";
+  const borderColor = isDark ? "#374151" : "#d1d5db";
+  const cardColor = isDark ? "#1f2937" : "#f9fafb";
+  const secondaryText = isDark ? "#9ca3af" : "#4b5563";
+
   const fetchNews = async () => {
     setLoading(true);
     let query = supabase
@@ -64,13 +71,20 @@ export default function NewsManager() {
       });
       return;
     }
+
     setSaving(true);
     setStatus({ type: "info", message: "Adding news..." });
 
-    const { error } = await supabase.from("news").insert({
-      title: newTitle.trim(),
-      description: newDescription.trim(),
-    });
+    const { data, error, status: insertStatus } = await supabase
+      .from("news")
+      .insert([
+        {
+          title: newTitle.trim(),
+          description: newDescription.trim(),
+        },
+      ]);
+
+    console.log("Insert result:", { insertStatus, error, data });
 
     if (error) {
       setStatus({ type: "error", message: "Error adding news." });
@@ -80,6 +94,7 @@ export default function NewsManager() {
       setStatus({ type: "success", message: "News added successfully!" });
       fetchNews();
     }
+
     setSaving(false);
   };
 
@@ -119,9 +134,9 @@ export default function NewsManager() {
       style={{
         maxWidth: 1200,
         margin: "3rem auto",
-        fontFamily: "'Inter', sans-serif",
         padding: "0 1rem",
-        color: theme === "dark" ? "#e0e0e0" : "#1f2937",
+        fontFamily: "'Inter', sans-serif",
+        color: textColor,
       }}
     >
       <div
@@ -129,6 +144,7 @@ export default function NewsManager() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          marginBottom: 24,
         }}
       >
         <h2 style={{ fontSize: 30, fontWeight: 700 }}>📰 News Manager</h2>
@@ -140,8 +156,10 @@ export default function NewsManager() {
             style={{
               padding: "6px 12px",
               borderRadius: 6,
-              border: "1px solid #ccc",
+              border: `1px solid ${borderColor}`,
               fontSize: 14,
+              background: bgColor,
+              color: textColor,
             }}
           >
             <option value="all">All</option>
@@ -152,18 +170,20 @@ export default function NewsManager() {
         </div>
       </div>
 
-      <section style={{ marginTop: 30, marginBottom: 40 }}>
+      <section style={{ marginBottom: 40 }}>
         <input
           placeholder="Title"
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           style={{
             width: "100%",
-            padding: 12,
+            padding: 14,
             marginBottom: 10,
-            borderRadius: 8,
-            border: "1px solid #ccc",
+            borderRadius: 10,
+            border: `1px solid ${borderColor}`,
             fontSize: 16,
+            background: bgColor,
+            color: textColor,
           }}
         />
         <textarea
@@ -173,11 +193,13 @@ export default function NewsManager() {
           rows={4}
           style={{
             width: "100%",
-            padding: 12,
-            borderRadius: 8,
+            padding: 14,
+            marginBottom: 14,
+            borderRadius: 10,
+            border: `1px solid ${borderColor}`,
             fontSize: 15,
-            border: "1px solid #ccc",
-            marginBottom: 16,
+            background: bgColor,
+            color: textColor,
           }}
         />
         <button
@@ -193,6 +215,7 @@ export default function NewsManager() {
             display: "flex",
             alignItems: "center",
             gap: 10,
+            cursor: "pointer",
           }}
         >
           {saving ? <FiLoader className="spin" /> : <FiPlusCircle />} Add News
@@ -200,17 +223,17 @@ export default function NewsManager() {
         {status && (
           <p
             style={{
-              marginTop: 14,
-              color:
-                status.type === "success"
-                  ? "green"
-                  : status.type === "error"
-                    ? "crimson"
-                    : "#2563eb",
+              marginTop: 16,
               fontWeight: 600,
               display: "flex",
               alignItems: "center",
               gap: 8,
+              color:
+                status.type === "success"
+                  ? "green"
+                  : status.type === "error"
+                  ? "crimson"
+                  : "#2563eb",
             }}
           >
             {renderStatusIcon()} {status.message}
@@ -222,7 +245,7 @@ export default function NewsManager() {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-          gap: 20,
+          gap: 24,
         }}
       >
         {loading ? (
@@ -236,16 +259,18 @@ export default function NewsManager() {
             <div
               key={item.id}
               style={{
-                backgroundColor: theme === "dark" ? "#1f2937" : "#fff",
+                backgroundColor: cardColor,
                 padding: 20,
-                borderRadius: 12,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                borderRadius: 14,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
               }}
             >
               <h4 style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>
                 {item.title}
               </h4>
-              <p style={{ fontSize: 15, color: "#555" }}>{item.description}</p>
+              <p style={{ fontSize: 15, color: secondaryText }}>
+                {item.description}
+              </p>
               <div
                 style={{
                   display: "flex",
@@ -253,7 +278,7 @@ export default function NewsManager() {
                   marginTop: 16,
                 }}
               >
-                <time style={{ fontSize: 13, color: "#888" }}>
+                <time style={{ fontSize: 13, color: secondaryText }}>
                   {new Date(item.created_at).toLocaleString()}
                 </time>
                 <button
@@ -275,7 +300,7 @@ export default function NewsManager() {
                     <FiLoader className="spin" />
                   ) : (
                     <FiTrash2 />
-                  )}{" "}
+                  )}
                   Delete
                 </button>
               </div>
