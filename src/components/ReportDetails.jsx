@@ -15,286 +15,91 @@ export default function ReportDetails({
 
   if (!report) {
     return (
-      <div
-        style={{
-          flexBasis: "40%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: isDark ? "#888" : "#666",
-          fontSize: 18,
-          fontWeight: "500",
-          fontStyle: "italic",
-          userSelect: "none",
-          padding: 20,
-          height: "100%",
-          backgroundColor: isDark ? "#222" : "#fafafa",
-          borderRadius: 12,
-          boxShadow: isDark
-            ? "0 4px 12px rgba(0,0,0,0.7)"
-            : "0 4px 12px rgba(0,0,0,0.1)",
-        }}
-      >
+      <div className="no-report">
         Select a report to view details
+        <style>{`
+          .no-report {
+            flex-basis: 40%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-style: italic;
+            padding: 20px;
+            border-radius: 12px;
+            background: ${isDark ? "#222" : "#f8f8f8"};
+            color: ${isDark ? "#999" : "#666"};
+            box-shadow: ${isDark ? "0 4px 12px rgba(0,0,0,0.7)" : "0 4px 12px rgba(0,0,0,0.1)"};
+          }
+        `}</style>
       </div>
     );
   }
 
-  const AssignedIcon = ({ assigned }) => (
-    <span
-      aria-label={assigned ? "Assigned" : "Unassigned"}
-      title={assigned ? "Assigned" : "Unassigned"}
-      style={{
-        color: assigned ? "#38a169" : "#e53e3e",
-        fontWeight: "bold",
-        fontSize: 20,
-        marginLeft: 6,
-        userSelect: "none",
-      }}
-    >
-      {assigned ? "✔" : "✖"}
-    </span>
-  );
-
   return (
-    <section
-      style={{
-        flexBasis: "40%",
-        backgroundColor: isDark ? "#121212" : "#fff",
-        borderRadius: 14,
-        boxShadow: isDark
-          ? "0 6px 18px rgba(0, 0, 0, 0.8)"
-          : "0 6px 18px rgba(0, 0, 0, 0.12)",
-        padding: 28,
-        display: "flex",
-        flexDirection: "column",
-        gap: 20,
-        color: isDark ? "#e0e0e0" : "#222",
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif',
-        maxHeight: "100vh",
-        overflowY: "auto",
-      }}
-    >
-      <header
-        style={{
-          borderBottom: `2px solid ${isDark ? "#333" : "#ddd"}`,
-          paddingBottom: 12,
-          marginBottom: 16,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <h2
-          style={{
-            fontSize: 24,
-            fontWeight: 700,
-            color: isDark ? "#4bb2d6" : "#0077b6",
-            letterSpacing: 0.8,
-          }}
-        >
-          {report.name
-            ? `Report by ${report.name}`
-            : `Report #${String(report.id).slice(0, 8)}`}
+    <section className="report-details">
+      <header className="header">
+        <h2 className="title">
+          {report.name ? `Report by ${report.name}` : `Report #${report.id}`}
         </h2>
-        <span
-          style={{
-            fontWeight: "600",
-            fontSize: 14,
-            padding: "4px 12px",
-            borderRadius: 20,
-            backgroundColor:
-              report.status === "Assigned"
-                ? "#38a169"
-                : isDark
-                  ? "#555"
-                  : "#ccc",
-            color: "#fff",
-            textTransform: "uppercase",
-            letterSpacing: 0.6,
-            userSelect: "none",
-          }}
-        >
+        <span className={`status ${report.status?.toLowerCase() || "new"}`}>
           {report.status || "New"}
         </span>
       </header>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          fontWeight: 600,
-          fontSize: 16,
-          color: isDark ? "#9bbbd4" : "#444",
-          marginBottom: 12,
-          gap: 8,
-        }}
-      >
-        <span>Submitted To:</span>
+      {/* Assigned Department */}
+      <div className="assigned-box">
+        <strong>Assigned To:</strong>
         <span
-          style={{
-            color: isDark ? "#d0d0d0" : "#222",
-            fontWeight: "normal",
-          }}
+          className={report.assigned_department ? "assigned" : "unassigned"}
         >
-          {report.submitted_department || "N/A"}
+          {report.assigned_department || "Not Assigned"}
         </span>
-        <AssignedIcon assigned={!!report.assigned_department} />
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 16,
-          marginBottom: 16,
-        }}
-      >
+      {/* Basic Info */}
+      <div className="meta-grid">
         {[
-          { label: "Name", value: report.name },
-          { label: "Email", value: report.email },
-          { label: "Phone", value: report.phone },
-          {
-            label: "Created",
-            value: new Date(report.created_at).toLocaleString(),
-          },
-        ].map(({ label, value }) => (
+          ["Name", report.name],
+          ["Email", report.email],
+          ["Phone", report.phone],
+          ["Created", new Date(report.created_at).toLocaleString()],
+        ].map(([label, value]) => (
           <div key={label}>
-            <label
-              style={{
-                fontWeight: 600,
-                fontSize: 14,
-                color: isDark ? "#9bbbd4" : "#444",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                marginBottom: 6,
-                display: "block",
-              }}
-            >
-              {label}
-            </label>
-            <p style={{ fontSize: 16, color: isDark ? "#d0d0d0" : "#222" }}>
-              {value || <em>N/A</em>}
-            </p>
+            <label className="meta-label">{label}</label>
+            <p className="meta-value">{value || <em>N/A</em>}</p>
           </div>
         ))}
       </div>
 
-      <section>
-        <label
-          style={{
-            fontWeight: 700,
-            fontSize: 18,
-            marginBottom: 8,
-            display: "block",
-            color: isDark ? "#4bb2d6" : "#0077b6",
-          }}
-        >
-          Description
-        </label>
-        <pre
-          style={{
-            whiteSpace: "pre-wrap",
-            backgroundColor: isDark ? "#1a1a1a" : "#f5f9ff",
-            border: `1px solid ${isDark ? "#333" : "#ccd6f6"}`,
-            borderRadius: 10,
-            padding: 18,
-            fontFamily: "monospace, monospace",
-            fontSize: 15,
-            color: isDark ? "#cbd5e1" : "#334155",
-            maxHeight: 180,
-            overflowY: "auto",
-            userSelect: "text",
-          }}
-        >
-          {report.description || "No description provided."}
-        </pre>
-      </section>
+      {/* Description */}
+      <div className="description">
+        <label>Description</label>
+        <pre>{report.description || "No description provided."}</pre>
+      </div>
 
+      {/* Attachment */}
       {report.attachment_url && (
-        <section>
-          <label
-            style={{
-              fontWeight: 700,
-              fontSize: 18,
-              marginBottom: 8,
-              display: "block",
-              color: isDark ? "#4bb2d6" : "#0077b6",
-            }}
-          >
-            Attached Image
-          </label>
+        <div className="attachment">
+          <label>Attached Image</label>
           <a
             href={report.attachment_url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{
-              display: "inline-block",
-              borderRadius: 12,
-              overflow: "hidden",
-              boxShadow: isDark
-                ? "0 6px 16px rgba(75, 178, 214, 0.5)"
-                : "0 6px 16px rgba(0, 119, 182, 0.3)",
-              transition: "transform 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "scale(1.05)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "scale(1)";
-            }}
           >
-            <img
-              src={report.attachment_url}
-              alt="Attached Report"
-              style={{
-                width: "100%",
-                maxHeight: 320,
-                objectFit: "cover",
-                display: "block",
-              }}
-            />
+            <img src={report.attachment_url} alt="Attachment" />
           </a>
-        </section>
+        </div>
       )}
 
-      <section style={{ marginTop: 20 }}>
-        <label
-          htmlFor="assign-dept"
-          style={{
-            fontWeight: 700,
-            fontSize: 16,
-            marginBottom: 6,
-            display: "block",
-            color: isDark ? "#9bbbd4" : "#555",
-          }}
-        >
-          Assign to Department
-        </label>
+      {/* Department Assignment */}
+      <div className="assign">
+        <label htmlFor="assign-dept">Assign to Department</label>
         <select
           id="assign-dept"
           value={selectedDepartment}
           onChange={(e) => setSelectedDepartment(e.target.value)}
           disabled={assigning}
-          style={{
-            width: "100%",
-            padding: "12px 14px",
-            fontSize: 15,
-            borderRadius: 8,
-            border: `1.8px solid ${isDark ? "#4bb2d6" : "#0077b6"}`,
-            backgroundColor: isDark ? "#121212" : "#f0f8ff",
-            color: isDark ? "#e0e0e0" : "#222",
-            cursor: assigning ? "not-allowed" : "pointer",
-            outline: "none",
-            transition: "border-color 0.3s ease",
-          }}
-          onFocus={(e) =>
-            (e.currentTarget.style.borderColor = isDark ? "#8dd2ff" : "#3399ff")
-          }
-          onBlur={(e) =>
-            (e.currentTarget.style.borderColor = isDark ? "#4bb2d6" : "#0077b6")
-          }
         >
           <option value="">Select department</option>
           {departments.map((dept) => (
@@ -305,65 +110,185 @@ export default function ReportDetails({
         </select>
 
         <button
+          disabled={!selectedDepartment || assigning}
           onClick={assignToDepartment}
-          disabled={assigning || !selectedDepartment}
-          style={{
-            marginTop: 16,
-            width: "100%",
-            padding: "14px 0",
-            fontSize: 17,
-            fontWeight: "700",
-            borderRadius: 10,
-            border: "none",
-            backgroundColor: assigning
-              ? "#999"
-              : isDark
-                ? "#3399ff"
-                : "#0077b6",
-            color: "#fff",
-            cursor:
-              assigning || !selectedDepartment ? "not-allowed" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            transition: "background-color 0.3s ease",
-            boxShadow: assigning
-              ? "none"
-              : isDark
-                ? "0 4px 12px rgba(51, 153, 255, 0.6)"
-                : "0 4px 12px rgba(0, 119, 182, 0.6)",
-          }}
-          onMouseEnter={(e) => {
-            if (!assigning && selectedDepartment) {
-              e.currentTarget.style.backgroundColor = isDark
-                ? "#1a78e1"
-                : "#005fa3";
-              e.currentTarget.style.boxShadow = isDark
-                ? "0 6px 20px rgba(26, 120, 225, 0.8)"
-                : "0 6px 20px rgba(0, 95, 163, 0.8)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!assigning && selectedDepartment) {
-              e.currentTarget.style.backgroundColor = isDark
-                ? "#3399ff"
-                : "#0077b6";
-              e.currentTarget.style.boxShadow = isDark
-                ? "0 4px 12px rgba(51, 153, 255, 0.6)"
-                : "0 4px 12px rgba(0, 119, 182, 0.6)";
-            }
-          }}
         >
           {assigning ? (
             "Assigning..."
           ) : (
             <>
-              <FiCheckCircle size={20} /> Assign Department
+              <FiCheckCircle /> Assign Department
             </>
           )}
         </button>
-      </section>
+      </div>
+
+      {/* Styles */}
+      <style>{`
+        .report-details {
+          flex-basis: 40%;
+          background: ${isDark ? "#121212" : "#fff"};
+          color: ${isDark ? "#e0e0e0" : "#222"};
+          padding: 24px;
+          border-radius: 12px;
+          box-shadow: ${
+            isDark ? "0 6px 18px rgba(0,0,0,0.6)" : "0 6px 18px rgba(0,0,0,0.1)"
+          };
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          overflow-y: auto;
+        }
+
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid ${isDark ? "#333" : "#ddd"};
+          padding-bottom: 10px;
+        }
+
+        .title {
+          font-size: 22px;
+          font-weight: bold;
+          color: ${isDark ? "#4bb2d6" : "#0077b6"};
+        }
+
+        .status {
+          padding: 4px 12px;
+          font-size: 13px;
+          border-radius: 20px;
+          color: #fff;
+          text-transform: uppercase;
+        }
+
+        .status.assigned {
+          background: #4caf50;
+        }
+        .status.new {
+          background: ${isDark ? "#555" : "#888"};
+        }
+
+        .assigned-box {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .assigned-box span.assigned {
+          color: #4caf50;
+          font-weight: 700;
+        }
+
+        .assigned-box span.unassigned {
+          color: #f44336;
+          font-weight: 700;
+        }
+
+        .meta-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+
+        .meta-label {
+          font-weight: 600;
+          font-size: 13px;
+          text-transform: uppercase;
+          margin-bottom: 4px;
+          display: block;
+        }
+
+        .meta-value {
+          font-size: 15px;
+        }
+
+        .description label {
+          font-weight: 700;
+          font-size: 16px;
+          margin-bottom: 8px;
+          display: block;
+          color: ${isDark ? "#4bb2d6" : "#0077b6"};
+        }
+
+        .description pre {
+          white-space: pre-wrap;
+          background: ${isDark ? "#1e1e1e" : "#f3f9ff"};
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid ${isDark ? "#333" : "#ccd6f6"};
+          font-size: 14px;
+          color: ${isDark ? "#ddd" : "#334"};
+        }
+
+        .attachment label {
+          font-weight: 700;
+          font-size: 16px;
+          margin-bottom: 8px;
+          display: block;
+        }
+
+        .attachment a {
+          display: inline-block;
+          border-radius: 10px;
+          overflow: hidden;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+          transition: transform 0.2s ease;
+        }
+
+        .attachment img {
+          width: 100%;
+          max-height: 300px;
+          object-fit: cover;
+        }
+
+        .assign label {
+          font-weight: 700;
+          font-size: 14px;
+          display: block;
+          margin-bottom: 6px;
+        }
+
+        .assign select {
+          width: 100%;
+          padding: 10px 12px;
+          font-size: 14px;
+          border-radius: 8px;
+          border: 1.5px solid ${isDark ? "#4bb2d6" : "#0077b6"};
+          background: ${isDark ? "#121212" : "#eef8ff"};
+          color: ${isDark ? "#eee" : "#222"};
+          margin-bottom: 12px;
+        }
+
+        .assign button {
+          width: 100%;
+          padding: 12px;
+          font-size: 15px;
+          font-weight: bold;
+          border-radius: 8px;
+          border: none;
+          background: ${isDark ? "#3399ff" : "#0077b6"};
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: background 0.3s ease;
+        }
+
+        .assign button:disabled {
+          background: #888;
+          cursor: not-allowed;
+        }
+html[data-theme="dark"] .report-row[aria-selected="true"] {
+  box-shadow: inset 0 0 0 1px #90caf9;
+}
+
+        .assign button:hover:not(:disabled) {
+          background: ${isDark ? "#1a78e1" : "#005fa3"};
+        }
+      `}</style>
     </section>
   );
 }

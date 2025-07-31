@@ -35,7 +35,8 @@ import {
 } from "react-icons/fa";
 
 export default function App() {
-  const { theme } = useContext(ThemeContext);
+  // Fixed here: single destructure of theme and toggleTheme from context
+  const { theme, toggleTheme } = useContext(ThemeContext);
 
   // --- States ---
   const [session, setSession] = useState(null);
@@ -51,7 +52,6 @@ export default function App() {
   const [videos, setVideos] = useState([]);
   const [videosLoading, setVideosLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-const { theme, toggleTheme } = useContext(ThemeContext);
   const lastReportIds = useRef(new Set());
 
   const departments = [
@@ -314,7 +314,9 @@ const { theme, toggleTheme } = useContext(ThemeContext);
     return (
       <Login
         onLogin={() =>
-          supabase.auth.getSession().then(({ data }) => setSession(data.session))
+          supabase.auth
+            .getSession()
+            .then(({ data }) => setSession(data.session))
         }
       />
     );
@@ -358,7 +360,8 @@ const { theme, toggleTheme } = useContext(ThemeContext);
           <div
             style={{
               padding: "1rem 1.5rem",
-              borderBottom: theme === "dark" ? "1px solid #333" : "1px solid #eee",
+              borderBottom:
+                theme === "dark" ? "1px solid #333" : "1px solid #eee",
               display: "flex",
               justifyContent: sidebarOpen ? "space-between" : "center",
               alignItems: "center",
@@ -407,24 +410,28 @@ const { theme, toggleTheme } = useContext(ThemeContext);
             }}
           >
             <button
-  onClick={toggleTheme}
-  aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-  style={{
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    fontSize: 20,
-    display: "flex",
-    alignItems: "center",
-    color: theme === "dark" ? "#f9fbfd" : "#121212",
-    transition: "color 0.3s ease",
-  }}
->
-  {theme === "light" ? <FaMoon /> : <FaSun />}
-</button>
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontSize: 20,
+                display: "flex",
+                alignItems: "center",
+                color: theme === "dark" ? "#f9fbfd" : "#121212",
+                transition: "color 0.3s ease",
+              }}
+            >
+              {theme === "light" ? <FaMoon /> : <FaSun />}
+            </button>
             {[
               { key: "dashboard", label: "Dashboard", icon: <FaChartBar /> },
-              { key: "election", label: "Election Date", icon: <FaCalendarAlt /> },
+              {
+                key: "election",
+                label: "Election Date",
+                icon: <FaCalendarAlt />,
+              },
               { key: "news", label: "News", icon: <FaNewspaper /> },
               { key: "config", label: "App Config", icon: <FaCogs /> },
               { key: "videos", label: "Videos", icon: <FaVideo /> },
@@ -450,17 +457,15 @@ const { theme, toggleTheme } = useContext(ThemeContext);
                         ? "#4caf50"
                         : "#388e3c"
                       : theme === "dark"
-                      ? "#ccc"
-                      : "#555",
+                        ? "#ccc"
+                        : "#555",
                     backgroundColor: active
                       ? theme === "dark"
                         ? "rgba(76, 175, 80, 0.15)"
                         : "rgba(56, 142, 60, 0.15)"
                       : "transparent",
                     borderLeft: active
-                      ? `4px solid ${
-                          theme === "dark" ? "#4caf50" : "#388e3c"
-                        }`
+                      ? `4px solid ${theme === "dark" ? "#4caf50" : "#388e3c"}`
                       : "4px solid transparent",
                     transition: "background-color 0.25s ease, color 0.25s ease",
                     whiteSpace: "nowrap",
@@ -487,8 +492,8 @@ const { theme, toggleTheme } = useContext(ThemeContext);
                           ? "#4caf50"
                           : "#388e3c"
                         : theme === "dark"
-                        ? "#aaa"
-                        : "#777",
+                          ? "#aaa"
+                          : "#777",
                     }}
                   >
                     {icon}
@@ -535,7 +540,11 @@ const { theme, toggleTheme } = useContext(ThemeContext);
               aria-label="Logout"
             >
               <FaSignOutAlt
-                style={{ fontSize: 20, userSelect: "none", pointerEvents: "none" }}
+                style={{
+                  fontSize: 20,
+                  userSelect: "none",
+                  pointerEvents: "none",
+                }}
               />
               {sidebarOpen && "Logout"}
             </button>
@@ -715,27 +724,27 @@ const { theme, toggleTheme } = useContext(ThemeContext);
         </main>
 
         <style>{`
-        html[data-theme="light"] {
-  --bg-color: #f9fbfd;
-  --text-color: #121212;
-  --header-bg: #ffffff;
-  --header-border: #eee;
-  --card-bg: #ffffff;
-}
+          html[data-theme="light"] {
+            --bg-color: #f9fbfd;
+            --text-color: #121212;
+            --header-bg: #ffffff;
+            --header-border: #eee;
+            --card-bg: #ffffff;
+          }
 
-html[data-theme="dark"] {
-  --bg-color: #121212;
-  --text-color: #f9fbfd;
-  --header-bg: #1a1a1a;
-  --header-border: #333;
-  --card-bg: #282828;
-}
+          html[data-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #f9fbfd;
+            --header-bg: #1a1a1a;
+            --header-border: #333;
+            --card-bg: #282828;
+          }
 
-body {
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
+          body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+          }
 
           .nav-btn:hover {
             background-color: ${theme === "dark" ? "#2a2a2a" : "#f0f0f0"};
