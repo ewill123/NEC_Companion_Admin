@@ -39,6 +39,7 @@ export default function ElectionDateManager() {
       } else {
         const config = Object.fromEntries(data.map((d) => [d.key, d.value]));
         if (config.election_date) setDate(new Date(config.election_date));
+        else setDate(null);
         setElectionDayMessage(config.electionDayMessage || "");
         setElectionAfterMessage(config.electionAfterMessage || "");
         setStatus(null);
@@ -73,7 +74,28 @@ export default function ElectionDateManager() {
     );
   };
 
-  // Calculate days left and progress percentage (max 60 days)
+  const handleDeleteDate = async () => {
+    if (!date) return; // Nothing to delete
+
+    setSaving(true);
+    setStatus({ type: "info", message: "Deleting election date..." });
+
+    const { error: deleteError } = await supabase
+      .from("app_config")
+      .delete()
+      .eq("key", "election_date");
+
+    if (deleteError) {
+      setStatus({ type: "error", message: "Failed to delete election date" });
+      setSaving(false);
+      return;
+    }
+
+    setDate(null);
+    setStatus({ type: "success", message: "Election date deleted" });
+    setSaving(false);
+  };
+
   const now = new Date();
   const maxDays = 60;
   const daysLeft = date
@@ -154,7 +176,6 @@ export default function ElectionDateManager() {
               flexWrap: "wrap",
             }}
           >
-            {/* Calendar */}
             <section style={{ flex: "1 1 280px" }}>
               <label
                 htmlFor="election-date-picker"
@@ -180,7 +201,6 @@ export default function ElectionDateManager() {
                 }}
               />
 
-              {/* Show selected date with countdown progress bar */}
               {date && (
                 <div
                   style={{
@@ -226,7 +246,6 @@ export default function ElectionDateManager() {
                         : `Days Left: ${daysLeft}`}
                   </p>
 
-                  {/* Progress bar container */}
                   <div
                     style={{
                       height: 12,
@@ -257,7 +276,6 @@ export default function ElectionDateManager() {
               )}
             </section>
 
-            {/* Messages */}
             <section style={{ flex: "1 1 400px", minWidth: 280 }}>
               <label
                 htmlFor="electionDayMessage"
@@ -301,15 +319,33 @@ export default function ElectionDateManager() {
                 style={textAreaStyle(isDark)}
               />
 
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                style={buttonStyle(isDark, saving)}
-                aria-label="Save Election Configurations"
-              >
-                <FiSave size={20} />
-                {saving ? "Saving..." : "Save Configurations"}
-              </button>
+              <div style={{ marginTop: 20, display: "flex", gap: 12 }}>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  style={buttonStyle(isDark, saving)}
+                  aria-label="Save Election Configurations"
+                >
+                  <FiSave size={20} />
+                  {saving ? "Saving..." : "Save Configurations"}
+                </button>
+
+                <button
+                  onClick={handleDeleteDate}
+                  disabled={saving || loading || !date}
+                  style={{
+                    ...buttonStyle(isDark, saving),
+                    backgroundColor: isDark ? "#dc2626" : "#ef4444",
+                    boxShadow: isDark
+                      ? "0 4px 16px rgba(220, 38, 38, 0.7)"
+                      : "0 4px 16px rgba(239, 68, 68, 0.7)",
+                  }}
+                  aria-label="Delete Election Date"
+                  type="button"
+                >
+                  Delete Date
+                </button>
+              </div>
 
               {status && (
                 <p
@@ -338,9 +374,7 @@ export default function ElectionDateManager() {
         </>
       )}
 
-      {/* Dark mode styles for react-day-picker */}
       <style>{`
-        /* Dark theme overrides for react-day-picker */
         .rdp-dark {
           --rdp-background-color: #1e293b;
           --rdp-accent-color: #2563eb;
@@ -355,11 +389,9 @@ export default function ElectionDateManager() {
           border-radius: 10px;
           box-shadow: ${isDark ? "0 0 20px #3b82f6" : "none"};
         }
-
         .rdp-selected {
           border-radius: 10px !important;
         }
-
         .rdp-today {
           font-weight: 700;
         }
@@ -383,7 +415,7 @@ const textAreaStyle = (dark) => ({
 });
 
 const buttonStyle = (dark, disabled) => ({
-  marginTop: 30,
+  marginTop: 0,
   backgroundColor: dark ? "#2563eb" : "#2563eb",
   color: "#fff",
   fontWeight: 700,
